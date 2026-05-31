@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.stats import entropy
 
 def discrete_state(returns_df):
     """
@@ -12,22 +11,15 @@ def discrete_state(returns_df):
     return states.tolist()
 
 def elementary_ca_rule(rule_number):
-    """
-    Return a function that given (left, center, right) returns new state.
-    rule_number: 0-255
-    """
+    """Return a function that given (left, center, right) returns new state."""
     bits = [(rule_number >> i) & 1 for i in range(8)]
-    # Order of neighborhoods: 111, 110, 101, 100, 011, 010, 001, 000
     def rule(l, c, r):
         idx = (l << 2) | (c << 1) | r
-        return bits[7 - idx]   # because bits[0] corresponds to 000, bits[7] to 111
+        return bits[7 - idx]
     return rule
 
 def lempel_ziv_complexity(seq):
-    """
-    Compute Lempel‑Ziv complexity (number of distinct substrings).
-    Higher complexity = more chaotic.
-    """
+    """Lempel‑Ziv complexity (number of distinct substrings) normalized."""
     n = len(seq)
     if n == 0:
         return 0.0
@@ -35,12 +27,9 @@ def lempel_ziv_complexity(seq):
     for i in range(n):
         for j in range(i+1, n+1):
             substrings.add(tuple(seq[i:j]))
-    return len(substrings) / (n * (n+1) / 2)   # normalized by max possible
+    return len(substrings) / (n * (n+1) / 2)
 
 def apply_cellular_automaton(states, rule_number=30, steps=50):
-    """
-    Evolve 1D elementary CA on a ring.
-    """
     n = len(states)
     rule = elementary_ca_rule(rule_number)
     history = [states.copy()]
@@ -58,7 +47,8 @@ def apply_cellular_automaton(states, rule_number=30, steps=50):
 
 def cellular_automaton_score(returns, rule_number=30, steps=50):
     """
-    For each ETF, compute the Lempel‑Ziv complexity of its state sequence.
+    Return a stability score for each ETF: 1 - Lempel‑Ziv complexity.
+    Higher score = more stable/predictable (trending).
     """
     states = discrete_state(returns)
     _, history = apply_cellular_automaton(states, rule_number, steps)
@@ -66,6 +56,7 @@ def cellular_automaton_score(returns, rule_number=30, steps=50):
     scores = np.zeros(len(states))
     for i in range(len(states)):
         seq = history[:, i].tolist()
-        scores[i] = lempel_ziv_complexity(seq)
+        complexity = lempel_ziv_complexity(seq)
+        scores[i] = 1.0 - complexity   # stability = 1 - chaos
     tickers = returns.columns
     return {ticker: float(scores[i]) for i, ticker in enumerate(tickers)}
