@@ -4,40 +4,36 @@ from scipy.stats import entropy
 def discrete_state(returns, n_states=2):
     """
     Convert returns to discrete states (0 or 1) based on median.
-    Returns a numpy array.
+    Returns a list of ints.
     """
     median = np.median(returns)
     states = (returns > median).astype(int)
-    # Convert to numpy array (values only) to avoid pandas index issues
-    return states.values
+    return states.tolist()
 
 def apply_cellular_automaton(states, rule_type='majority', threshold=0.5, steps=50):
     """
     Evolve the 1D cellular automaton for given steps.
-    states: numpy array of ints (0/1)
-    Returns the final state array and the full history (list of numpy arrays).
+    states: list of ints (0/1)
+    Returns final state list and full history (list of lists).
     """
     n = len(states)
     history = [states.copy()]
     current = states.copy()
     for _ in range(steps):
-        new = np.zeros(n, dtype=int)
+        new = [0] * n
         for i in range(n):
             left = current[(i-1) % n]
             right = current[(i+1) % n]
             center = current[i]
             if rule_type == 'majority':
-                # majority of three cells
                 new[i] = 1 if (left + center + right) >= 2 else 0
             elif rule_type == 'game_of_life_1d':
-                # 1D Game of Life: birth if exactly one neighbor is 1, survive if 1 and one neighbor, else die
                 neighbors = left + right
                 if center == 1:
                     new[i] = 1 if neighbors == 1 else 0
                 else:
                     new[i] = 1 if neighbors == 1 else 0
             elif rule_type == 'threshold':
-                # weighted average of neighbors (continuous), then threshold
                 avg = (left + center + right) / 3.0
                 new[i] = 1 if avg > threshold else 0
             else:
@@ -54,7 +50,6 @@ def cellular_automaton_score(returns, rule_type='majority', threshold=0.5, steps
     states = discrete_state(returns)
     _, history = apply_cellular_automaton(states, rule_type, threshold, steps)
     history = np.array(history)  # shape (steps+1, n)
-    # For each cell, compute entropy of its state sequence over time
     scores = np.zeros(len(states))
     for i in range(len(states)):
         seq = history[:, i]
