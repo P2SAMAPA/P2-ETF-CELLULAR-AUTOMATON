@@ -20,7 +20,6 @@ UNIVERSES = {
 }
 
 # Cellular automaton parameters
-CA_STEPS = 50                # number of iterations
-RULE_TYPE = 'majority'       # 'majority', 'game_of_life_1d', or 'threshold'
-THRESHOLD = 0.5              # for threshold rule (0-1)
+CA_STEPS = 50
+CA_RULE = 30                 # Wolfram rule (30 produces chaos)
 TOP_N = 3
