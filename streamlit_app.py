@@ -33,7 +33,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown('<h1 style="text-align: center;">🧬 Cellular Automaton Market Engine</h1>', unsafe_allow_html=True)
-st.markdown('<p style="text-align: center;">1‑D ring of ETFs | Majority rule / Game of Life | Local entropy as signal</p>', unsafe_allow_html=True)
+st.markdown('<p style="text-align: center;">1‑D ring of ETFs | Elementary CA (Wolfram rule) | Local entropy as signal</p>', unsafe_allow_html=True)
 
 st.sidebar.markdown("## 🧩 Cellular Automaton")
 if st.sidebar.button("🔄 Refresh Data", use_container_width=True, type="primary"):
@@ -42,7 +42,7 @@ if st.sidebar.button("🔄 Refresh Data", use_container_width=True, type="primar
 
 st.sidebar.markdown(f"**Run Date:** `{st.session_state.get('run_date', 'Not loaded')}`")
 st.sidebar.markdown(f"**Next Trading Day:** `{next_trading_day()}`")
-st.sidebar.markdown(f"**Rule:** {config.RULE_TYPE} | **Steps:** {config.CA_STEPS}")
+st.sidebar.markdown(f"**Rule:** {config.CA_RULE} | **Steps:** {config.CA_STEPS}")
 
 OUTPUT_REPO = config.OUTPUT_REPO
 HF_TOKEN = config.HF_TOKEN
@@ -113,13 +113,13 @@ with tab1:
     st.header("🧬 Top ETFs by Cellular Automaton Local Entropy (Auto Best Window)")
     with st.expander("📖 Interpretation", expanded=False):
         st.markdown("""
-        - **Cellular automaton** models local interactions in a 1‑D ring of ETFs.
-        - Each ETF’s state is its return relative to median (0 = low, 1 = high).
-        - The update rule (e.g., majority vote, 1D Game of Life) mimics social/market influence.
-        - After many iterations, some cells flip often (high entropy), others remain stable (low entropy).
-        - Score = **binary entropy** of the cell’s state over time.
-        - High entropy → ETF is chaotic, influences neighbours, hard to predict.
-        - Low entropy → ETF is stable, trending, predictable.
+        - **Elementary cellular automaton** (Wolfram rule) on a 1‑D ring of ETFs.
+        - Each ETF’s initial state is whether its average return is above the median of the universe.
+        - The automaton evolves for a fixed number of steps according to a chosen rule (e.g., Rule 30, which produces chaos).
+        - For each ETF, we compute the binary entropy of its state sequence over time.
+        - High entropy → ETF flips often → chaotic influence, potentially regime‑sensitive.
+        - Low entropy → ETF remains stable → trending, predictable.
+        - The best window is automatically selected (last window used as fallback).
         """)
     for universe_name, uni_data in data["universes"].items():
         if not uni_data or not uni_data.get("all_windows"):
@@ -152,4 +152,4 @@ with tab2:
             st.warning("No data for selected window.")
 
 st.sidebar.markdown("---")
-st.sidebar.caption("Cellular Automaton | Local entropy from neighbour interactions")
+st.sidebar.caption("Cellular Automaton | Elementary CA (Wolfram rule) for ETF entropy")
