@@ -20,7 +20,7 @@ def run_for_window(returns, window_days):
     if len(returns) < window_days:
         return None
     ret_window = returns.iloc[-window_days:]
-    raw_scores = cellular_automaton_score(ret_window, rule_type=config.RULE_TYPE, threshold=config.THRESHOLD, steps=config.CA_STEPS)
+    raw_scores = cellular_automaton_score(ret_window, rule_number=config.CA_RULE, steps=config.CA_STEPS)
     norm_scores = normalize_scores(raw_scores)
     sorted_norm = sorted(norm_scores.items(), key=lambda x: x[1], reverse=True)
     top_etfs = [{"ticker": t, "ca_score_norm": s, "raw_score": raw_scores[t]} for t, s in sorted_norm[:config.TOP_N]]
@@ -37,8 +37,7 @@ def main():
     results = {
         "run_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "windows": config.WINDOWS,
-        "rule_type": config.RULE_TYPE,
-        "threshold": config.THRESHOLD,
+        "ca_rule": config.CA_RULE,
         "ca_steps": config.CA_STEPS,
         "universes": {}
     }
