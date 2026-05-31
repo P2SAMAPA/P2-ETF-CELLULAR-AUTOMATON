@@ -4,14 +4,18 @@ from scipy.stats import entropy
 def discrete_state(returns, n_states=2):
     """
     Convert returns to discrete states (0 or 1) based on median.
+    Returns a numpy array.
     """
     median = np.median(returns)
-    return (returns > median).astype(int)
+    states = (returns > median).astype(int)
+    # Convert to numpy array (values only) to avoid pandas index issues
+    return states.values
 
 def apply_cellular_automaton(states, rule_type='majority', threshold=0.5, steps=50):
     """
     Evolve the 1D cellular automaton for given steps.
-    Returns the final state array and the full history.
+    states: numpy array of ints (0/1)
+    Returns the final state array and the full history (list of numpy arrays).
     """
     n = len(states)
     history = [states.copy()]
@@ -54,7 +58,6 @@ def cellular_automaton_score(returns, rule_type='majority', threshold=0.5, steps
     scores = np.zeros(len(states))
     for i in range(len(states)):
         seq = history[:, i]
-        # count proportions of 0 and 1
         p0 = np.mean(seq == 0)
         p1 = 1 - p0
         if p0 == 0 or p1 == 0:
