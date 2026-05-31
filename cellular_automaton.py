@@ -2,12 +2,11 @@ import numpy as np
 
 def discrete_state(returns_df):
     """
-    Assign initial binary state to each ETF:
-    1 if the ETF's average return over the window is above the median, else 0.
+    Initial binary state for each ETF: 1 if last day's return > 0, else 0.
+    This produces more varied initial patterns.
     """
-    avg_returns = returns_df.mean(axis=0).values
-    median = np.median(avg_returns)
-    states = (avg_returns > median).astype(int)
+    last_return = returns_df.iloc[-1].values
+    states = (last_return > 0).astype(int)
     return states.tolist()
 
 def elementary_ca_rule(rule_number):
@@ -18,18 +17,8 @@ def elementary_ca_rule(rule_number):
         return bits[7 - idx]
     return rule
 
-def lempel_ziv_complexity(seq):
-    """Lempel‑Ziv complexity (number of distinct substrings) normalized."""
-    n = len(seq)
-    if n == 0:
-        return 0.0
-    substrings = set()
-    for i in range(n):
-        for j in range(i+1, n+1):
-            substrings.add(tuple(seq[i:j]))
-    return len(substrings) / (n * (n+1) / 2)
-
-def apply_cellular_automaton(states, rule_number=30, steps=50):
+def apply_cellular_automaton(states, rule_number=30, steps=100):
+    """Evolve 1D elementary CA on a ring."""
     n = len(states)
     rule = elementary_ca_rule(rule_number)
     history = [states.copy()]
@@ -45,18 +34,21 @@ def apply_cellular_automaton(states, rule_number=30, steps=50):
         history.append(current.copy())
     return current, history
 
-def cellular_automaton_score(returns, rule_number=30, steps=50):
+def cellular_automaton_score(returns, rule_number=30, steps=100):
     """
-    Return a stability score for each ETF: 1 - Lempel‑Ziv complexity.
-    Higher score = more stable/predictable (trending).
+    For each ETF, compute stability = 1 - flip_rate.
+    Flip rate = (number of state changes) / (steps).
+    Higher stability = more predictable / trending.
     """
     states = discrete_state(returns)
     _, history = apply_cellular_automaton(states, rule_number, steps)
     history = np.array(history)  # shape (steps+1, n)
     scores = np.zeros(len(states))
     for i in range(len(states)):
-        seq = history[:, i].tolist()
-        complexity = lempel_ziv_complexity(seq)
-        scores[i] = 1.0 - complexity   # stability = 1 - chaos
+        seq = history[:, i]
+        # count number of times the state changes between consecutive steps
+        flips = np.sum(seq[:-1] != seq[1:])
+        flip_rate = flips / steps
+        scores[i] = 1.0 - flip_rate   # stability
     tickers = returns.columns
     return {ticker: float(scores[i]) for i, ticker in enumerate(tickers)}
