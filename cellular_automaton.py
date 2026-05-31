@@ -23,6 +23,20 @@ def elementary_ca_rule(rule_number):
         return bits[7 - idx]   # because bits[0] corresponds to 000, bits[7] to 111
     return rule
 
+def lempel_ziv_complexity(seq):
+    """
+    Compute Lempel‑Ziv complexity (number of distinct substrings).
+    Higher complexity = more chaotic.
+    """
+    n = len(seq)
+    if n == 0:
+        return 0.0
+    substrings = set()
+    for i in range(n):
+        for j in range(i+1, n+1):
+            substrings.add(tuple(seq[i:j]))
+    return len(substrings) / (n * (n+1) / 2)   # normalized by max possible
+
 def apply_cellular_automaton(states, rule_number=30, steps=50):
     """
     Evolve 1D elementary CA on a ring.
@@ -44,19 +58,14 @@ def apply_cellular_automaton(states, rule_number=30, steps=50):
 
 def cellular_automaton_score(returns, rule_number=30, steps=50):
     """
-    For each ETF, compute the binary entropy of its state over time.
+    For each ETF, compute the Lempel‑Ziv complexity of its state sequence.
     """
     states = discrete_state(returns)
     _, history = apply_cellular_automaton(states, rule_number, steps)
     history = np.array(history)  # shape (steps+1, n)
     scores = np.zeros(len(states))
     for i in range(len(states)):
-        seq = history[:, i]
-        p0 = np.mean(seq == 0)
-        p1 = 1 - p0
-        if p0 == 0 or p1 == 0:
-            scores[i] = 0.0
-        else:
-            scores[i] = entropy([p0, p1], base=2)
+        seq = history[:, i].tolist()
+        scores[i] = lempel_ziv_complexity(seq)
     tickers = returns.columns
     return {ticker: float(scores[i]) for i, ticker in enumerate(tickers)}
