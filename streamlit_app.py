@@ -33,7 +33,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown('<h1 style="text-align: center;">🧬 Cellular Automaton Market Engine</h1>', unsafe_allow_html=True)
-st.markdown('<p style="text-align: center;">1‑D ring of ETFs | Elementary CA (Wolfram rule) | Local entropy as signal</p>', unsafe_allow_html=True)
+st.markdown('<p style="text-align: center;">1‑D ring of ETFs | Elementary CA (Wolfram rule) | Stability score</p>', unsafe_allow_html=True)
 
 st.sidebar.markdown("## 🧩 Cellular Automaton")
 if st.sidebar.button("🔄 Refresh Data", use_container_width=True, type="primary"):
@@ -42,7 +42,7 @@ if st.sidebar.button("🔄 Refresh Data", use_container_width=True, type="primar
 
 st.sidebar.markdown(f"**Run Date:** `{st.session_state.get('run_date', 'Not loaded')}`")
 st.sidebar.markdown(f"**Next Trading Day:** `{next_trading_day()}`")
-st.sidebar.markdown(f"**Rule:** {config.CA_RULE} | **Steps:** {config.CA_STEPS}")
+st.sidebar.markdown(f"**CA Rule:** {config.CA_RULE} | **Steps:** {config.CA_STEPS}")
 
 OUTPUT_REPO = config.OUTPUT_REPO
 HF_TOKEN = config.HF_TOKEN
@@ -97,29 +97,28 @@ def display_universe(universe_name, uni_data, window_data, window_label):
             st.markdown(f"""
             <div class="hero-card">
                 <h3>{etf['ticker']}</h3>
-                <p>Local entropy: {etf['ca_score_norm']:.3f}</p>
+                <p>Stability score: {etf['ca_score_norm']:.3f}</p>
                 <p style="font-size:0.9rem;">raw: {etf['raw_score']:.4f}</p>
             </div>
             """, unsafe_allow_html=True)
     with st.expander(f"Full ranking for {universe_name}"):
-        df_full = pd.DataFrame(list(norm_scores.items()), columns=["Ticker", "Normalized Entropy"])
+        df_full = pd.DataFrame(list(norm_scores.items()), columns=["Ticker", "Normalized Stability"])
         df_full["Raw Score"] = df_full["Ticker"].apply(lambda t: raw_scores[t])
-        df_full = df_full.sort_values("Normalized Entropy", ascending=False)
+        df_full = df_full.sort_values("Normalized Stability", ascending=False)
         st.dataframe(df_full, use_container_width=True)
 
 tab1, tab2 = st.tabs(["📊 Best Window (Auto)", "🔍 Choose Window (Manual)"])
 
 with tab1:
-    st.header("🧬 Top ETFs by Cellular Automaton Local Entropy (Auto Best Window)")
+    st.header("🧬 Top ETFs by Stability Score (Auto Best Window)")
     with st.expander("📖 Interpretation", expanded=False):
         st.markdown("""
-        - **Elementary cellular automaton** (Wolfram rule) on a 1‑D ring of ETFs.
-        - Each ETF’s initial state is whether its average return is above the median of the universe.
-        - The automaton evolves for a fixed number of steps according to a chosen rule (e.g., Rule 30, which produces chaos).
-        - For each ETF, we compute the binary entropy of its state sequence over time.
-        - High entropy → ETF flips often → chaotic influence, potentially regime‑sensitive.
-        - Low entropy → ETF remains stable → trending, predictable.
-        - The best window is automatically selected (last window used as fallback).
+        - **Cellular automaton** models local interactions in a 1‑D ring of ETFs.
+        - Each ETF's initial state is based on its last daily return (positive=1, negative=0).
+        - We simulate an elementary cellular automaton (Wolfram rule) for many steps.
+        - **Stability score** = 1 – flip rate (how often the cell changes state).
+        - High stability → ETF is predictable and trend‑following.
+        - Low stability → ETF is chaotic and regime‑sensitive.
         """)
     for universe_name, uni_data in data["universes"].items():
         if not uni_data or not uni_data.get("all_windows"):
@@ -138,7 +137,7 @@ with tab1:
 
 with tab2:
     st.header("🔍 Manual Window Selection")
-    st.markdown("Choose a rolling window to inspect the cellular automaton entropies.")
+    st.markdown("Choose a rolling window to inspect the stability scores.")
     for universe_name, uni_data in data["universes"].items():
         if not uni_data or not uni_data.get("all_windows"):
             st.warning(f"No window data for {universe_name}")
@@ -152,4 +151,4 @@ with tab2:
             st.warning("No data for selected window.")
 
 st.sidebar.markdown("---")
-st.sidebar.caption("Cellular Automaton | Elementary CA (Wolfram rule) for ETF entropy")
+st.sidebar.caption("Cellular Automaton | Elementary CA (Wolfram rule) for ETF stability")
