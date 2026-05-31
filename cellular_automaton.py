@@ -3,54 +3,51 @@ from scipy.stats import entropy
 
 def discrete_state(returns_df):
     """
-    Convert each ETF's average return over the window to binary state (0 or 1)
-    based on whether it is above the median of all ETFs' average returns.
-    Returns a list of ints.
+    Assign initial binary state to each ETF:
+    1 if the ETF's average return over the window is above the median, else 0.
     """
     avg_returns = returns_df.mean(axis=0).values
     median = np.median(avg_returns)
     states = (avg_returns > median).astype(int)
     return states.tolist()
 
-def apply_cellular_automaton(states, rule_type='majority', threshold=0.5, steps=50):
+def elementary_ca_rule(rule_number):
     """
-    Evolve the 1D cellular automaton for given steps.
-    states: list of ints (0/1)
-    Returns final state list and full history (list of lists).
+    Return a function that given (left, center, right) returns new state.
+    rule_number: 0-255
+    """
+    bits = [(rule_number >> i) & 1 for i in range(8)]
+    # Order of neighborhoods: 111, 110, 101, 100, 011, 010, 001, 000
+    def rule(l, c, r):
+        idx = (l << 2) | (c << 1) | r
+        return bits[7 - idx]   # because bits[0] corresponds to 000, bits[7] to 111
+    return rule
+
+def apply_cellular_automaton(states, rule_number=30, steps=50):
+    """
+    Evolve 1D elementary CA on a ring.
     """
     n = len(states)
+    rule = elementary_ca_rule(rule_number)
     history = [states.copy()]
     current = states.copy()
     for _ in range(steps):
         new = [0] * n
         for i in range(n):
             left = current[(i-1) % n]
-            right = current[(i+1) % n]
             center = current[i]
-            if rule_type == 'majority':
-                new[i] = 1 if (left + center + right) >= 2 else 0
-            elif rule_type == 'game_of_life_1d':
-                neighbors = left + right
-                if center == 1:
-                    new[i] = 1 if neighbors == 1 else 0
-                else:
-                    new[i] = 1 if neighbors == 1 else 0
-            elif rule_type == 'threshold':
-                avg = (left + center + right) / 3.0
-                new[i] = 1 if avg > threshold else 0
-            else:
-                raise ValueError(f"Unknown rule: {rule_type}")
+            right = current[(i+1) % n]
+            new[i] = rule(left, center, right)
         current = new
         history.append(current.copy())
     return current, history
 
-def cellular_automaton_score(returns, rule_type='majority', threshold=0.5, steps=50):
+def cellular_automaton_score(returns, rule_number=30, steps=50):
     """
-    For each ETF, compute the entropy of its state over time (local entropy).
-    High entropy = chaotic influence, low entropy = stable.
+    For each ETF, compute the binary entropy of its state over time.
     """
     states = discrete_state(returns)
-    _, history = apply_cellular_automaton(states, rule_type, threshold, steps)
+    _, history = apply_cellular_automaton(states, rule_number, steps)
     history = np.array(history)  # shape (steps+1, n)
     scores = np.zeros(len(states))
     for i in range(len(states)):
