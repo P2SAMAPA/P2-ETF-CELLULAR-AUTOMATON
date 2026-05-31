@@ -1,13 +1,15 @@
 import numpy as np
 from scipy.stats import entropy
 
-def discrete_state(returns, n_states=2):
+def discrete_state(returns_df):
     """
-    Convert returns to discrete states (0 or 1) based on median.
+    Convert each ETF's average return over the window to binary state (0 or 1)
+    based on whether it is above the median of all ETFs' average returns.
     Returns a list of ints.
     """
-    median = np.median(returns)
-    states = (returns > median).astype(int)
+    avg_returns = returns_df.mean(axis=0).values
+    median = np.median(avg_returns)
+    states = (avg_returns > median).astype(int)
     return states.tolist()
 
 def apply_cellular_automaton(states, rule_type='majority', threshold=0.5, steps=50):
